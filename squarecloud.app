@@ -1,0 +1,4 @@
+MAIN=run.bat
+MEMORY=128
+VERSION=v1.2.0
+DISPLAY_NAME=MateChat
