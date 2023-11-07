@@ -1,1 +1,0 @@
-run.bat > SalidaConsola.txt
