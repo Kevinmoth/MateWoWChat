@@ -2,7 +2,7 @@
 Retransmite canales de chat de NaerZone a tu servidor de Discord
 
 -----------------------------------------------------------------
-[![image.png](https://i.postimg.cc/tRW5cPKd/image.png)](https://postimg.cc/qgByhtMg)
+[![image.png](https://i.postimg.cc/hGWm1NYS/image.png)](https://postimg.cc/G4K9cgrN)
 
 -----------------------------------------------------------------
 
