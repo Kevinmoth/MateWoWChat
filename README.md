@@ -3,7 +3,7 @@ Retransmite canales de chat de NaerZone a tu servidor de Discord
 -Los Items/Spells/profeciones linkeados se convierten en un enlace a nuestra bd (comunidadnaer.com)
 
 v1.0.5
-- Filtro de lenguaje propio (por ahora en español).
+- Filtro de lenguaje propio (por ahora en español). \n
 `aun en desarrollo, el diccionario se actualizara en un futuro`
 - Añadida la BD de NaerZone.
 `los links ahora llevan a ComunidadNaer.com y no a Whead`
