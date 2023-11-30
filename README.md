@@ -1,3 +1,4 @@
+
 # MateWoWChat
 Retransmite canales de chat de NaerZone a tu servidor de Discord
 -Los Items/Spells/profeciones linkeados se convierten en un enlace a nuestra bd (comunidadnaer.com)
@@ -19,3 +20,21 @@ v1.0.7
 -----------------------------------------------------------------
 
 [![image.png](https://i.postimg.cc/YqvPjjZh/image.png)](https://postimg.cc/gnPsTcYW)
+
+
+<table>
+  <tr>
+    <td>
+      <!-- Aquí va tu texto -->
+      Añadida interfaz de configuracion. <br>
+      -Cuenta/contraseña/personaje: personaje que se mantendra online. <br>
+      -Token DC: El token de tu BOT de discord. <br>
+      -ID canal: la id del canal donde se retransmitira el chat.
+    </td>
+    <td>
+      <!-- Aquí va tu imagen -->
+      <img src="https://i.postimg.cc/pd9pXB9R/image.png" alt="Descripción alternativa">
+    </td>
+  </tr>
+</table>
+
