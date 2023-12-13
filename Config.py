@@ -28,7 +28,7 @@ def modificar_configuracion():
     with open(archivo, 'w') as file:
         file.writelines(lineas)
 
-    print("Archivo de configuración actualizado")
+    print("Configuracion actualizada")
 
 ventana = tk.Tk()
 ventana.title("MateWowChat")
