@@ -39,4 +39,4 @@ v1.0.7
 </table>
 
 Los creditos del codigo base son de @fijaros fjaros91@gmail.com
-Se utiliza la api de wowmini  para gestonar lso paquetes del chat y el login de personaje.
+Se utiliza la api de wowmini  para gestionar los paquetes del chat y el login de personaje.
