@@ -15,8 +15,7 @@ v1.0.7
 
 
 -----------------------------------------------------------------
-[![image.png](https://ibb.co/ccTqYm8w)](https://ibb.co/ccTqYm8w)
-[![image.png](https://i.postimg.cc/hGWm1NYS/image.png)](https://postimg.cc/G4K9cgrN)
+<img width="788" height="600" alt="Sin título" src="https://github.com/user-attachments/assets/f32ff30d-85b9-4fea-91f4-9090244b3bc7" />
 
 -----------------------------------------------------------------
 
