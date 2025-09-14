@@ -15,6 +15,7 @@ v1.0.7
 
 
 -----------------------------------------------------------------
+[![image.png](https://ibb.co/ccTqYm8w)](https://ibb.co/ccTqYm8w)
 [![image.png](https://i.postimg.cc/hGWm1NYS/image.png)](https://postimg.cc/G4K9cgrN)
 
 -----------------------------------------------------------------
