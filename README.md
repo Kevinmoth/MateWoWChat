@@ -20,6 +20,8 @@ v1.0.7
 -----------------------------------------------------------------
 
 [![image.png](https://i.postimg.cc/YqvPjjZh/image.png)](https://postimg.cc/gnPsTcYW)
+<img width="878" height="619" alt="image" src="https://github.com/user-attachments/assets/db35348e-33e3-49e9-8ca4-ec64c3e28d04" />
+
 
 
 <table>
