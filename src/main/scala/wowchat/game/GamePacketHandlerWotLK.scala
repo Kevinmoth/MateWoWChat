@@ -8,8 +8,8 @@ import io.netty.buffer.{ByteBuf, PooledByteBufAllocator}
 
 import scala.util.Random
 
-class GamePacketHandlerWotLK(realmId: Int, realmName: String, sessionKey: Array[Byte], gameEventCallback: CommonConnectionCallback)
-  extends GamePacketHandlerTBC(realmId, realmName, sessionKey, gameEventCallback) with GamePacketsWotLK {
+class GamePacketHandlerWotLK(session: WowSession, realmId: Int, realmName: String, sessionKey: Array[Byte], gameEventCallback: CommonConnectionCallback)
+  extends GamePacketHandlerTBC(session, realmId, realmName, sessionKey, gameEventCallback) with GamePacketsWotLK {
 
   override protected val addonInfo: Array[Byte] = Array(
     0x9E, 0x02, 0x00, 0x00, 0x78, 0x9C, 0x75, 0xD2, 0xC1, 0x6A, 0xC3, 0x30, 0x0C, 0xC6, 0x71, 0xEF,
@@ -29,7 +29,7 @@ class GamePacketHandlerWotLK(realmId: Int, realmName: String, sessionKey: Array[
   ).map(_.toByte)
 
   override protected def parseAuthChallenge(msg: Packet): AuthChallengeMessage = {
-    val account = Global.config.wow.account
+    val account = session.account
 
     msg.byteBuf.skipBytes(4) // wotlk
     val serverSeed = msg.byteBuf.readInt
@@ -82,7 +82,7 @@ class GamePacketHandlerWotLK(realmId: Int, realmName: String, sessionKey: Array[
   }
 
   override protected def parseCharEnum(msg: Packet): Option[CharEnumMessage] = {
-    val characterBytes = Global.config.wow.character.toLowerCase.getBytes("UTF-8")
+    val characterBytes = session.character.toLowerCase.getBytes("UTF-8")
     val charactersNum = msg.byteBuf.readByte
 
     // only care about guid and name here
@@ -148,7 +148,7 @@ class GamePacketHandlerWotLK(realmId: Int, realmName: String, sessionKey: Array[
     }
 
     // ignore if from an unhandled channel - unless it is a guild achievement message
-    if (tp != ChatEvents.CHAT_MSG_GUILD_ACHIEVEMENT && !Global.wowToDiscord.contains((tp, channelName.map(_.toLowerCase)))) {
+    if (tp != ChatEvents.CHAT_MSG_GUILD_ACHIEVEMENT && !Global.wowToDiscord.contains((sessionId, tp, channelName.map(_.toLowerCase)))) {
       return None
     }
 
@@ -171,7 +171,7 @@ class GamePacketHandlerWotLK(realmId: Int, realmName: String, sessionKey: Array[
     // This is a guild event so guid MUST be in roster already
     // (unless some weird edge case -> achievement came before roster update)
     guildRoster.get(guid).foreach(player => {
-      Global.discord.sendAchievementNotification(player.name, achievementId)
+      Global.discord.sendAchievementNotification(sessionId, player.name, achievementId)
     })
   }
 

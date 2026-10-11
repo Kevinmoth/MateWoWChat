@@ -8,8 +8,8 @@ import wowchat.common._
 
 import scala.util.Random
 
-class GamePacketHandlerCataclysm15595(realmId: Int, realmName: String, sessionKey: Array[Byte], gameEventCallback: CommonConnectionCallback)
-  extends GamePacketHandlerWotLK(realmId, realmName, sessionKey, gameEventCallback) with GamePacketsCataclysm15595 {
+class GamePacketHandlerCataclysm15595(session: WowSession, realmId: Int, realmName: String, sessionKey: Array[Byte], gameEventCallback: CommonConnectionCallback)
+  extends GamePacketHandlerWotLK(session, realmId, realmName, sessionKey, gameEventCallback) with GamePacketsCataclysm15595 {
 
   override protected def channelParse(msg: Packet): Unit = {
     msg.id match {
@@ -48,7 +48,7 @@ class GamePacketHandlerCataclysm15595(realmId: Int, realmName: String, sessionKe
   }
 
   override protected def parseAuthChallenge(msg: Packet): AuthChallengeMessage = {
-    val account = Global.config.wow.account
+    val account = session.account
 
     msg.byteBuf.skipBytes(32) // 32 bytes of random data?
     val serverSeed = msg.byteBuf.readInt
@@ -114,7 +114,7 @@ class GamePacketHandlerCataclysm15595(realmId: Int, realmName: String, sessionKe
   }
 
   override protected def parseCharEnum(msg: Packet): Option[CharEnumMessage] = {
-    val characterBytes = Global.config.wow.character.toLowerCase.getBytes("UTF-8")
+    val characterBytes = session.character.toLowerCase.getBytes("UTF-8")
     msg.readBits(24) // unkn
     val charactersNum = msg.readBits(17)
 

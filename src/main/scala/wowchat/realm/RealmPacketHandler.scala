@@ -11,7 +11,7 @@ import scala.io.StdIn
 
 private[realm] case class RealmList(name: String, address: String, realmId: Byte)
 
-class RealmPacketHandler(realmConnectionCallback: RealmConnectionCallback)
+class RealmPacketHandler(session: WowSession, realmConnectionCallback: RealmConnectionCallback)
   extends ChannelInboundHandlerAdapter with StrictLogging {
 
   private val srpClient = new SRPClient
@@ -68,7 +68,7 @@ class RealmPacketHandler(realmConnectionCallback: RealmConnectionCallback)
     logger.info(s"Conectado! Enviando información de inicio de sesión de la cuenta...")
     this.ctx = Some(ctx)
     val version = WowChatConfig.getVersion.split("\\.").map(_.toByte)
-    val accountConfig = Global.config.wow.account
+    val accountConfig = session.account
     val platformString = Global.config.wow.platform match {
       case Platform.Windows => "Win"
       case Platform.Mac => "OSX"
@@ -156,8 +156,8 @@ class RealmPacketHandler(realmConnectionCallback: RealmConnectionCallback)
     }
 
     srpClient.step1(
-      Global.config.wow.account,
-      Global.config.wow.password,
+      session.account,
+      session.password,
       BigNumber(B),
       BigNumber(g),
       BigNumber(n),
@@ -213,14 +213,14 @@ class RealmPacketHandler(realmConnectionCallback: RealmConnectionCallback)
     val accountFlag = msg.byteBuf.readIntLE
 
     // ask for realm list
-    logger.info(s"Conectado exitosamente al servidor de reinos. Buscando reino ${Global.config.wow.realmlist.name}")
+    logger.info(s"[${session.id}] Conectado exitosamente al servidor de reinos. Buscando reino ${session.realmlist.name}")
     val ret = PooledByteBufAllocator.DEFAULT.buffer(4, 4)
     ret.writeIntLE(0)
     ctx.get.writeAndFlush(Packet(RealmPackets.CMD_REALM_LIST, ret))
   }
 
   private def handle_CMD_REALM_LIST(msg: Packet): Unit = {
-    val configRealm = Global.config.wow.realmlist.name
+    val configRealm = session.realmlist.name
 
     val parsedRealmList = parseRealmList(msg)
     val realms = parsedRealmList

@@ -11,14 +11,19 @@ import wowchat.game.GamePackets
 import scala.collection.JavaConverters._
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
-case class WowChatConfig(discord: DiscordConfig, wow: Wow, guildConfig: GuildConfig, channels: Seq[ChannelConfig], filters: Option[FiltersConfig])
+case class WowChatConfig(discord: DiscordConfig, wow: Wow, sessions: Seq[WowSession], guildConfig: GuildConfig, channels: Seq[ChannelConfig], filters: Option[FiltersConfig]) {
+  def defaultSessionId: String = sessions.head.id
+}
+case class WowSession(id: String, realmlist: RealmListConfig, account: Array[Byte], password: String, character: String) {
+  override def toString: String = s"WowSession($id, realm=${realmlist.name}, character=$character)"
+}
 case class DiscordConfig(token: String, enableDotCommands: Boolean, dotCommandsWhitelist: Set[String], enableCommandsChannels: Set[String], enableTagFailedNotifications: Boolean, itemDatabase: Option[String])
 case class Wow(locale: String, platform: Platform.Value, realmBuild: Option[Int], gameBuild: Option[Int], realmlist: RealmListConfig, account: Array[Byte], password: String, character: String, enableServerMotd: Boolean)
 case class RealmListConfig(name: String, host: String, port: Int)
 case class GuildConfig(notificationConfigs: Map[String, GuildNotificationConfig])
-case class GuildNotificationConfig(enabled: Boolean, format: String, channel: Option[String])
+case class GuildNotificationConfig(enabled: Boolean, format: String, channel: Option[String], session: Option[String] = None)
 case class ChannelConfig(chatDirection: ChatDirection, wow: WowChannelConfig, discord: DiscordChannelConfig)
-case class WowChannelConfig(id: Option[Int], tp: Byte, channel: Option[String] = None, format: String, filters: Option[FiltersConfig])
+case class WowChannelConfig(id: Option[Int], tp: Byte, channel: Option[String] = None, format: String, filters: Option[FiltersConfig], session: Option[String] = None)
 case class DiscordChannelConfig(channel: String, format: String, filters: Option[FiltersConfig])
 case class FiltersConfig(enabled: Boolean, patterns: Seq[String])
 
@@ -42,8 +47,12 @@ object WowChatConfig extends GamePackets {
     val filtersConf = getConfigOpt(config, "filters")
 
     // we gotta load this first to initialize constants that change between versions :OMEGALUL:
-    version = getOpt(wowConf, "version").getOrElse("1.12.1")
+    version = getOpt[String](wowConf, "version").getOrElse("1.12.1")
     expansion = WowExpansion.valueOf(version)
+
+    val sessions = parseSessions(wowConf)
+    val channels = parseChannels(channelsConf)
+    validate(sessions, channels, parseGuildConfig(guildConf))
 
     WowChatConfig(
       DiscordConfig(
@@ -67,8 +76,9 @@ object WowChatConfig extends GamePackets {
         wowConf.getString("character"),
         getOpt[Boolean](wowConf, "enable_server_motd").getOrElse(true)
       ),
+      sessions,
       parseGuildConfig(guildConf),
-      parseChannels(channelsConf),
+      channels,
       parseFilters(filtersConf)
     )
   }
@@ -115,15 +125,85 @@ object WowChatConfig extends GamePackets {
 
   private def parseRealmlist(wowConf: Config): RealmListConfig = {
     val realmlist = wowConf.getString("realmlist")
-    val splt = realmlist.split(":", 2)
-    val (host, port) =
-      if (splt.length == 1) {
-        (splt.head, 3724)
-      } else {
-        (splt.head, splt(1).toInt)
-      }
+    val (host, port) = parseRealmlistHost(realmlist)
 
     RealmListConfig(wowConf.getString("realm"), host, port)
+  }
+
+  private def parseRealmlistHost(realmlist: String): (String, Int) = {
+    val splt = realmlist.split(":", 2)
+    if (splt.length == 1) {
+      (splt.head, 3724)
+    } else {
+      (splt.head, splt(1).toInt)
+    }
+  }
+
+  // Sesiones de WoW. Si existe wow.sessions se usa multi-sesion; si no, una sola sesion
+  // legacy construida a partir de los campos wow.account/password/character.
+  private def parseSessions(wowConf: Config): Seq[WowSession] = {
+    val defaultRealmlist = parseRealmlist(wowConf)
+
+    getConfigOpt(wowConf, "sessions").fold {
+      Seq(WowSession(
+        "default",
+        defaultRealmlist,
+        convertToUpper(wowConf.getString("account")),
+        wowConf.getString("password"),
+        wowConf.getString("character")
+      ))
+    } { sessionsConf =>
+      val sessionIds = sessionsConf.root().keySet().asScala.toSeq
+      if (sessionIds.isEmpty) {
+        throw new IllegalArgumentException("wow.sessions esta definido pero vacio!")
+      }
+      sessionIds.map(id => {
+        val conf = sessionsConf.getConfig(id)
+        val realm = getOpt[String](conf, "realm").getOrElse(defaultRealmlist.name)
+        val realmlist = getOpt[String](conf, "realmlist") match {
+          case Some(realmlistOverride) =>
+            val (host, port) = parseRealmlistHost(realmlistOverride)
+            RealmListConfig(realm, host, port)
+          case None =>
+            defaultRealmlist.copy(name = realm)
+        }
+        WowSession(
+          id,
+          realmlist,
+          convertToUpper(conf.getString("account")),
+          conf.getString("password"),
+          conf.getString("character")
+        )
+      })
+    }
+  }
+
+  private def validate(sessions: Seq[WowSession], channels: Seq[ChannelConfig], guildConfig: GuildConfig): Unit = {
+    if (sessions.isEmpty) {
+      throw new IllegalArgumentException("No hay sesiones de WoW definidas!")
+    }
+    val sessionIds = sessions.map(_.id)
+    if (sessionIds.distinct.length != sessionIds.length) {
+      throw new IllegalArgumentException(s"IDs de sesion duplicados: $sessionIds")
+    }
+    channels.foreach(channelConfig => {
+      channelConfig.wow.session.foreach(session => {
+        if (!sessionIds.contains(session)) {
+          throw new IllegalArgumentException(s"El canal de Discord '${channelConfig.discord.channel}' referencia la sesion '$session' que no existe. Sesiones: $sessionIds")
+        }
+      })
+      if (sessions.length > 1 && channelConfig.wow.session.isEmpty) {
+        throw new IllegalArgumentException(s"El canal de Discord '${channelConfig.discord.channel}' no tiene wow.session y hay ${sessions.length} sesiones. Debes asignar cada canal a una sesion.")
+      }
+    })
+    guildConfig.notificationConfigs.foreach {
+      case (key, notificationConfig) =>
+        notificationConfig.session.foreach(session => {
+          if (!sessionIds.contains(session)) {
+            throw new IllegalArgumentException(s"La notificacion de guild '$key' referencia la sesion '$session' que no existe. Sesiones: $sessionIds")
+          }
+        })
+    }
   }
 
   private def parseGuildConfig(guildConf: Option[Config]): GuildConfig = {
@@ -149,11 +229,12 @@ object WowChatConfig extends GamePackets {
         defaults.keysIterator.map(key => {
           val conf = getConfigOpt(guildConf, key)
           val default = defaults(key)
-          key -> conf.fold(GuildNotificationConfig(default._1, default._2, None))(conf => {
+          key ->           conf.fold(GuildNotificationConfig(default._1, default._2, None))(conf => {
             GuildNotificationConfig(
               getOpt[Boolean](conf, "enabled").getOrElse(default._1),
               getOpt[String](conf, "format").getOrElse(default._2),
-              getOpt[String](conf, "channel")
+              getOpt[String](conf, "channel"),
+              getOpt[String](conf, "session")
             )
           })
         })
@@ -175,7 +256,8 @@ object WowChatConfig extends GamePackets {
             ChatEvents.parse(channel.getString("wow.type")),
             wowChannel,
             getOpt[String](channel, "wow.format").getOrElse(""),
-            parseFilters(getConfigOpt(channel, "wow.filters"))
+            parseFilters(getConfigOpt(channel, "wow.filters")),
+            getOpt[String](channel, "wow.session")
           ),
           DiscordChannelConfig(
             channel.getString("discord.channel"),

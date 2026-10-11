@@ -6,4 +6,5 @@ GreetBot
 # Configs con secretos reales (no subir al historial)
 /wowchat.conf
 /wowchat.conf2
+/wowchat-test.conf
 /src/main/resources/wowchat.conf

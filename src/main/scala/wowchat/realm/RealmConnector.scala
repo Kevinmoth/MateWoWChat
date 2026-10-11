@@ -14,27 +14,27 @@ import io.netty.util.concurrent.Future
 
 import scala.util.Try
 
-class RealmConnector(realmConnectionCallback: RealmConnectionCallback) extends StrictLogging {
+class RealmConnector(session: WowSession, realmConnectionCallback: RealmConnectionCallback) extends StrictLogging {
 
   private var channel: Option[Channel] = None
 
   def connect: Unit = {
-    logger.info(s"Conectando a ${Global.config.wow.realmlist.host}:${Global.config.wow.realmlist.port}")
+    logger.info(s"[${session.id}] Conectando a ${session.realmlist.host}:${session.realmlist.port}")
 
     val bootstrap = new Bootstrap
     bootstrap.group(Global.group)
       .channel(classOf[NioSocketChannel])
       .option[java.lang.Integer](ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
       .option[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, true)
-      .remoteAddress(new InetSocketAddress(Global.config.wow.realmlist.host, Global.config.wow.realmlist.port))
+      .remoteAddress(new InetSocketAddress(session.realmlist.host, session.realmlist.port))
       .handler(new ChannelInitializer[SocketChannel]() {
 
         @throws[Exception]
         override protected def initChannel(socketChannel: SocketChannel): Unit = {
           val handler = if (WowChatConfig.getExpansion == WowExpansion.Vanilla) {
-            new RealmPacketHandler(realmConnectionCallback)
+            new RealmPacketHandler(session, realmConnectionCallback)
           } else {
-            new RealmPacketHandlerTBC(realmConnectionCallback)
+            new RealmPacketHandlerTBC(session, realmConnectionCallback)
           }
 
           socketChannel.pipeline.addLast(
@@ -51,7 +51,7 @@ class RealmConnector(realmConnectionCallback: RealmConnectionCallback) extends S
       Try {
         future.get(10, TimeUnit.SECONDS)
       }.fold(throwable => {
-        logger.error(s"Falló la conexión al servidor  ${throwable.getMessage}")
+        logger.error(s"[${session.id}] Falló la conexión al servidor  ${throwable.getMessage}")
         realmConnectionCallback.disconnected
       }, _ => Unit)
     }).channel)

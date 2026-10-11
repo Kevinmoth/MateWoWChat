@@ -41,8 +41,24 @@ class Discord(discordConnectionCallback: CommonConnectionCallback) extends Liste
 
   private val messageResolver = MessageResolver(jda)
 
-  private var lastStatus: Option[Activity] = None
+  // Estado de presencia por sesion: cada sesion de WoW reporta su texto y
+  // el bot muestra la combinacion de todas en una sola presencia.
+  private val sessionStatuses = mutable.LinkedHashMap[String, String]()
   private var firstConnect = true
+
+  def updateSessionStatus(sessionId: String, message: String): Unit = {
+    sessionStatuses.synchronized {
+      sessionStatuses(sessionId) = message
+      refreshSessionStatus
+    }
+  }
+
+  private def refreshSessionStatus: Unit = {
+    val combined = sessionStatuses.values.mkString(" | ")
+    if (combined.nonEmpty && jda.getStatus == Status.CONNECTED) {
+      jda.getPresence.setActivity(Activity.of(ActivityType.CUSTOM_STATUS, combined))
+    }
+  }
 
   private val recentMessages = mutable.Map[String, mutable.Queue[(String, Long)]]()
   private val duplicateWindow = 15000L // 15 segundos
@@ -99,21 +115,8 @@ private def levenshteinDistance(s1: String, s2: String): Int = {
   distance(s1.length, s2.length)
 }
 
-  def changeStatus(gameType: ActivityType, message: String): Unit = {
-    lastStatus = Some(Activity.of(gameType, message))
-    jda.getPresence.setActivity(lastStatus.get)
-  }
-
-  def changeGuildStatus(message: String): Unit = {
-    changeStatus(ActivityType.WATCHING, message)
-  }
-
-  def changeRealmStatus(message: String): Unit = {
-    changeStatus(ActivityType.CUSTOM_STATUS, message)
-  }
-
-  def sendMessageFromWow(from: Option[String], message: String, wowType: Byte, wowChannel: Option[String]): Unit = {
-    Global.wowToDiscord.get((wowType, wowChannel.map(_.toLowerCase))).foreach(discordChannels => {
+  def sendMessageFromWow(sessionId: String, from: Option[String], message: String, wowType: Byte, wowChannel: Option[String]): Unit = {
+    Global.wowToDiscord.get((sessionId, wowType, wowChannel.map(_.toLowerCase))).foreach(discordChannels => {
       val parsedLinks = messageResolver.resolveEmojis(messageResolver.stripColorCoding(limpiarCodigosWoW(messageResolver.resolveLinks(message))))
       discordChannels.foreach {
         case (channel, channelConfig) =>
@@ -168,7 +171,7 @@ val formatted = channelConfig
           }
           if (Global.config.discord.enableTagFailedNotifications) {
             errors.foreach(error => {
-              Global.game.foreach(_.sendMessageToWow(ChatEvents.CHAT_MSG_WHISPER, error, from))
+              Global.getGame(sessionId).foreach(_.sendMessageToWow(ChatEvents.CHAT_MSG_WHISPER, error, from))
               channel.sendMessage(error).queue()
             })
           }
@@ -176,10 +179,12 @@ val formatted = channelConfig
     })
   }
 
-  def sendGuildNotification(eventKey: String, message: String): Unit = {
+  def sendGuildNotification(sessionId: String, eventKey: String, message: String): Unit = {
     Global.guildEventsToDiscord
-      .getOrElse(eventKey, Global.wowToDiscord.getOrElse(
-          (ChatEvents.CHAT_MSG_GUILD, None), mutable.Set.empty
+      .getOrElse(
+        (sessionId, eventKey),
+        Global.wowToDiscord.getOrElse(
+          (sessionId, ChatEvents.CHAT_MSG_GUILD, None), mutable.Set.empty
         ).map(_._1)
       )
       .foreach(channel => {
@@ -188,35 +193,38 @@ val formatted = channelConfig
       })
   }
 
-  def sendAchievementNotification(name: String, achievementId: Int): Unit = {
-    val notificationConfig = Global.config.guildConfig.notificationConfigs("Logro")
-    if (!notificationConfig.enabled) {
-      return
-    }
+  def sendAchievementNotification(sessionId: String, name: String, achievementId: Int): Unit = {
+    Global.config.guildConfig.notificationConfigs.get("Logro").fold({
+      logger.warn("No existe la configuracion de notificacion 'Logro' en guild; logro ignorado")
+    })(notificationConfig => {
+      if (notificationConfig.enabled) {
+        Global.wowToDiscord.get((sessionId, ChatEvents.CHAT_MSG_GUILD, None))
+          .foreach(_.foreach {
+            case (discordChannel, _) =>
+              val formatted = notificationConfig
+                .format
+                .replace("%time", Global.getTime)
+                .replace("%user", name)
+                .replace("%achievement", messageResolver.resolveAchievementId(achievementId))
 
-    Global.wowToDiscord.get((ChatEvents.CHAT_MSG_GUILD, None))
-      .foreach(_.foreach {
-        case (discordChannel, _) =>
-          val formatted = notificationConfig
-            .format
-            .replace("%time", Global.getTime)
-            .replace("%user", name)
-            .replace("%achievement", messageResolver.resolveAchievementId(achievementId))
-
-          discordChannel.sendMessage(formatted).queue()
-      })
+              discordChannel.sendMessage(formatted).queue()
+          })
+      }
+    })
   }
 
   override def onStatusChange(event: StatusChangeEvent): Unit = {
     event.getNewStatus match {
       case Status.CONNECTED =>
-        lastStatus.foreach(game => changeStatus(game.getType, game.getName))
+        sessionStatuses.synchronized(refreshSessionStatus)
         // this is a race condition if already connected to wow, reconnect to discord, and bot tries to send
         // wow->discord message. alternatively it was throwing already garbage collected exceptions if trying
         // to use the previous connection's channel references. I guess need to refill these maps on discord reconnection
         Global.discordToWow.clear
         Global.wowToDiscord.clear
         Global.guildEventsToDiscord.clear
+
+        val sessionIds = Global.config.sessions.map(_.id)
 
         // getNext seq of needed channels from config
         val configChannels = Global.config.channels.map(channelConfig => {
@@ -231,7 +239,7 @@ val formatted = channelConfig
             configChannelsNames.contains(channel.getId)
           )
 
-        // build directional maps
+        // build directional maps (con la sesion de WoW como parte de la clave)
         eligibleDiscordChannels.foreach(channel => {
           configChannels
             .filter {
@@ -241,24 +249,26 @@ val formatted = channelConfig
             }
             .foreach {
               case (name, channelConfig) =>
+                val sessionId = channelConfig.wow.session.getOrElse(Global.config.defaultSessionId)
+
                 if (channelConfig.chatDirection == ChatDirection.both ||
                   channelConfig.chatDirection == ChatDirection.discord_to_wow) {
                   Global.discordToWow.addBinding(
-                    name.toLowerCase, channelConfig.wow
+                    name.toLowerCase, (sessionId, channelConfig.wow)
                   )
                 }
 
                 if (channelConfig.chatDirection == ChatDirection.both ||
                   channelConfig.chatDirection == ChatDirection.wow_to_discord) {
                   Global.wowToDiscord.addBinding(
-                    (channelConfig.wow.tp, channelConfig.wow.channel.map(_.toLowerCase)),
+                    (sessionId, channelConfig.wow.tp, channelConfig.wow.channel.map(_.toLowerCase)),
                     (channel, channelConfig.discord)
                   )
                 }
             }
           })
 
-        // build guild notification maps
+        // build guild notification maps (sin sesion = enlazado a todas las sesiones)
         val guildEventChannels = Global.config.guildConfig.notificationConfigs
           .filter {
             case (_, notificationConfig) =>
@@ -278,7 +288,13 @@ val formatted = channelConfig
             }
             .foreach {
               case (notificationKey, _) =>
-                Global.guildEventsToDiscord.addBinding(notificationKey, channel)
+                val guildEventSessionIds = Global.config.guildConfig.notificationConfigs(notificationKey).session match {
+                  case Some(session) => Seq(session)
+                  case None => sessionIds
+                }
+                guildEventSessionIds.foreach(sessionId =>
+                  Global.guildEventsToDiscord.addBinding((sessionId, notificationKey), channel)
+                )
             }
         })
 
@@ -337,29 +353,32 @@ val formatted = channelConfig
     }
 
     if ((enableCommandsChannels.nonEmpty && !enableCommandsChannels.contains(channelName)) || !CommandHandler(channel, message)) {
-      // send to all configured wow channels
+      // send to all configured wow channels (cada binding lleva su sesion de WoW)
       Global.discordToWow
         .get(channelName)
         .fold(Global.discordToWow.get(channelId))(Some(_))
-        .foreach(_.foreach(channelConfig => {
-          val finalMessages = if (shouldSendDirectly(message)) {
-            Seq(message)
-          } else {
-            splitUpMessage(channelConfig.format, effectiveName, message)
-          }
+        .foreach(_.foreach {
+          case (sessionId, channelConfig) =>
+            Global.getGame(sessionId).fold({
+              logger.error(s"La sesion '$sessionId' no esta conectada! Mensaje descartado.")
+            })(handler => {
+              val finalMessages = if (shouldSendDirectly(message)) {
+                Seq(message)
+              } else {
+                splitUpMessage(channelConfig.format, effectiveName, message)
+              }
 
-          finalMessages.foreach(finalMessage => {
-            val filter = shouldFilter(channelConfig.filters, finalMessage)
-            logger.info(s"${if (filter) "FILTERED " else ""}Discord->WoW(${
-              channelConfig.channel.getOrElse(ChatEvents.valueOf(channelConfig.tp))
-            }) $finalMessage")
-            if (!filter) {
-              Global.game.fold(logger.error("Cannot enviar mensaje! no estas conectado al wow!"))(handler => {
-                handler.sendMessageToWow(channelConfig.tp, finalMessage, channelConfig.channel)
+              finalMessages.foreach(finalMessage => {
+                val filter = shouldFilter(channelConfig.filters, finalMessage)
+                logger.info(s"${if (filter) "FILTERED " else ""}Discord->WoW[$sessionId](${
+                  channelConfig.channel.getOrElse(ChatEvents.valueOf(channelConfig.tp))
+                }) $finalMessage")
+                if (!filter) {
+                  handler.sendMessageToWow(channelConfig.tp, finalMessage, channelConfig.channel)
+                }
               })
-            }
-          })
-        }))
+            })
+        })
     }
   }
 

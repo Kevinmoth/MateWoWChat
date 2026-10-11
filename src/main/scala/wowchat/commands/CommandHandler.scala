@@ -35,7 +35,7 @@ object CommandHandler extends StrictLogging {
     Try {
       possibleCommand match {
         case "who" | "online" =>
-          Global.game.fold({
+          Global.defaultGame.fold({
             fromChannel.sendMessage(NOT_ONLINE).queue()
             return true
           })(game => {
@@ -46,7 +46,7 @@ object CommandHandler extends StrictLogging {
             whoSucceeded
           })
         case "gmotd" =>
-          Global.game.fold({
+          Global.defaultGame.fold({
             fromChannel.sendMessage(NOT_ONLINE).queue()
             return true
           })(_.handleGmotd())

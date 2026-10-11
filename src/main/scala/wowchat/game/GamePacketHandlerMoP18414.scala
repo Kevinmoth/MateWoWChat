@@ -10,8 +10,8 @@ import wowchat.game.warden.{WardenHandler, WardenHandlerMoP18414}
 
 import scala.util.Random
 
-class GamePacketHandlerMoP18414(realmId: Int, realmName: String, sessionKey: Array[Byte], gameEventCallback: CommonConnectionCallback)
-  extends GamePacketHandlerCataclysm15595(realmId, realmName, sessionKey, gameEventCallback) with GamePacketsMoP18414 {
+class GamePacketHandlerMoP18414(session: WowSession, realmId: Int, realmName: String, sessionKey: Array[Byte], gameEventCallback: CommonConnectionCallback)
+  extends GamePacketHandlerCataclysm15595(session, realmId, realmName, sessionKey, gameEventCallback) with GamePacketsMoP18414 {
 
   override protected val addonInfo: Array[Byte] = Array(
     0x30, 0x05, 0x00, 0x00, 0x78, 0x9C, 0x75, 0x93, 0x61, 0x6E, 0x83, 0x30, 0x0C, 0x85, 0xD9, 0x3D,
@@ -262,7 +262,7 @@ class GamePacketHandlerMoP18414(realmId: Int, realmName: String, sessionKey: Arr
   }
 
   override protected def parseAuthChallenge(msg: Packet): AuthChallengeMessage = {
-    val account = Global.config.wow.account
+    val account = session.account
 
     msg.byteBuf.skipBytes(35) // MoP - 35 bytes random data
     val serverSeed = msg.byteBuf.readInt
@@ -322,7 +322,7 @@ class GamePacketHandlerMoP18414(realmId: Int, realmName: String, sessionKey: Arr
   }
 
   override protected def parseCharEnum(msg: Packet): Option[CharEnumMessage] = {
-    val characterBytes = Global.config.wow.character.toLowerCase.getBytes("UTF-8")
+    val characterBytes = session.character.toLowerCase.getBytes("UTF-8")
     msg.readBits(21) // unkn
     val charactersNum = msg.readBits(16)
 
@@ -562,7 +562,7 @@ class GamePacketHandlerMoP18414(realmId: Int, realmName: String, sessionKey: Arr
     }
 
     // ignore if from an unhandled channel - unless it is a guild achievement message
-    if (tp != ChatEvents.CHAT_MSG_GUILD_ACHIEVEMENT && !Global.wowToDiscord.contains((tp, channelName.map(_.toLowerCase)))) {
+    if (tp != ChatEvents.CHAT_MSG_GUILD_ACHIEVEMENT && !Global.wowToDiscord.contains((sessionId, tp, channelName.map(_.toLowerCase)))) {
       return None
     }
 

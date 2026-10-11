@@ -23,8 +23,10 @@ case class AuthChallengeMessage(sessionKey: Array[Byte], byteBuf: ByteBuf)
 case class CharEnumMessage(name: String, guid: Long, race: Byte, guildGuid: Long)
 case class GuildInfo(name: String, ranks: Map[Int, String])
 
-class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte], gameEventCallback: CommonConnectionCallback)
+class GamePacketHandler(session: WowSession, realmId: Int, realmName: String, sessionKey: Array[Byte], gameEventCallback: CommonConnectionCallback)
   extends ChannelInboundHandlerAdapter with GameCommandHandler with GamePackets with StrictLogging {
+
+  protected val sessionId: String = session.id
 
   protected val addonInfo: Array[Byte] = Array(
     0x56, 0x01, 0x00, 0x00, 0x78, 0x9C, 0x75, 0xCC, 0xBD, 0x0E, 0xC2, 0x30, 0x0C, 0x04, 0xE0, 0xF2,
@@ -60,9 +62,9 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
     executorService.shutdown()
     this.ctx = None
     gameEventCallback.disconnected
-    Global.game = None
+    Global.removeGame(sessionId)
     if (inWorld) {
-      Global.discord.sendMessageFromWow(None, "Desconectado del servidor!", ChatEvents.CHAT_MSG_SYSTEM, None)
+      Global.discord.sendMessageFromWow(sessionId, None, "Desconectado del servidor!", ChatEvents.CHAT_MSG_SYSTEM, None)
     }
     super.channelInactive(ctx)
   }
@@ -97,7 +99,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
   }
 
   def buildGuildiesOnline: String = {
-    val characterName = Global.config.wow.character
+    val characterName = session.character
 
     guildRoster
       .valuesIterator
@@ -126,7 +128,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
   }
 
   protected def updateGuildiesOnline: Unit = {
-    Global.discord.changeGuildStatus(getGuildiesOnlineMessage(true))
+    Global.discord.updateSessionStatus(sessionId, getGuildiesOnlineMessage(true))
   }
 
   protected def queryGuildName: Unit = {
@@ -219,9 +221,9 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
   }
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
-    logger.info("Conectado! Autenticando...")
+    logger.info(s"[$sessionId] Conectado! Autenticando...")
     this.ctx = Some(ctx)
-    Global.game = Some(this)
+    Global.setGame(sessionId, this)
     runPingExecutor
   }
 
@@ -266,7 +268,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
   }
 
   protected def parseAuthChallenge(msg: Packet): AuthChallengeMessage = {
-    val account = Global.config.wow.account
+    val account = session.account
 
     val serverSeed = msg.byteBuf.readInt
     val clientSeed = Random.nextInt
@@ -327,7 +329,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
       .remove(nameQueryMessage.guid)
       .foreach(messages => {
         messages.foreach(message => {
-          Global.discord.sendMessageFromWow(Some(nameQueryMessage.name), message.message, message.tp, message.channel)
+          Global.discord.sendMessageFromWow(sessionId, Some(nameQueryMessage.name), message.message, message.tp, message.channel)
         })
         playerRoster += nameQueryMessage.guid -> Player(nameQueryMessage.name, nameQueryMessage.charClass)
     })
@@ -355,9 +357,9 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
     }
     receivedCharEnum = true
     parseCharEnum(msg).fold({
-      logger.error(s"Personaje ${Global.config.wow.character} no encontrado!")
+      logger.error(s"[$sessionId] Personaje ${session.character} no encontrado!")
     })(character => {
-      logger.info(s"Ingresando con el personaje ${character.name}")
+      logger.info(s"[$sessionId] Ingresando con el personaje ${character.name}")
       selfCharacterId = Some(character.guid)
       languageId = Races.getLanguage(character.race)
       guildGuid = character.guildGuid
@@ -369,7 +371,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
   }
 
   protected def parseCharEnum(msg: Packet): Option[CharEnumMessage] = {
-    val characterBytes = Global.config.wow.character.toLowerCase.getBytes("UTF-8")
+    val characterBytes = session.character.toLowerCase.getBytes("UTF-8")
     val charactersNum = msg.byteBuf.readByte
 
     // only care about guid and name here
@@ -415,9 +417,9 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
       return
     }
 
-    logger.info("¡Unido al mundo con éxito!")
+    logger.info(s"[$sessionId] ¡Unido al mundo con éxito!")
     inWorld = true
-    Global.discord.changeRealmStatus(realmName)
+    Global.discord.updateSessionStatus(sessionId, realmName)
     gameEventCallback.connected
     runKeepAliveExecutor
     runGuildRosterExecutor
@@ -426,8 +428,9 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
       updateGuildRoster
     }
 
-    // join channels
+    // join channels (solo los canales configurados para ESTA sesion)
     Global.config.channels
+      .filter(channelConfig => channelConfig.wow.session.getOrElse(Global.config.defaultSessionId) == sessionId)
       .flatMap(channelConfig => {
         channelConfig.wow.channel.fold[Option[(Int, String)]](None)(channelName => {
           Some(channelConfig.wow.id.getOrElse(ChatChannelIds.getId(channelName)) -> channelName)
@@ -435,7 +438,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
       })
       .foreach {
         case (id, name) =>
-          logger.info(s"Uniéndose al canal $name")
+          logger.info(s"[$sessionId] Uniéndose al canal $name")
           val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(50, 200)
           writeJoinChannel(byteBuf, id, name.getBytes("UTF-8"))
           ctx.get.writeAndFlush(Packet(CMSG_JOIN_CHANNEL, byteBuf))
@@ -481,7 +484,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
     }
 
     // ignore events from self
-    if (event != GuildEvents.GE_MOTD && Global.config.wow.character.equalsIgnoreCase(messages.head)) {
+    if (event != GuildEvents.GE_MOTD && session.character.equalsIgnoreCase(messages.head)) {
       return
     }
 
@@ -521,7 +524,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
             .replace("%message", messages.head)
       }
 
-      Global.discord.sendGuildNotification(eventConfigKey, formatted)
+      Global.discord.sendGuildNotification(sessionId, eventConfigKey, formatted)
     }
 
     updateGuildRoster
@@ -566,7 +569,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
 
   protected def sendChatMessage(chatMessage: ChatMessage): Unit = {
     if (chatMessage.guid == 0) {
-      Global.discord.sendMessageFromWow(None, chatMessage.message, chatMessage.tp, None)
+      Global.discord.sendMessageFromWow(sessionId, None, chatMessage.message, chatMessage.tp, None)
     } else {
       playerRoster.get(chatMessage.guid).fold({
         queuedChatMessages.get(chatMessage.guid).fold({
@@ -574,7 +577,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
           sendNameQuery(chatMessage.guid)
         })(_ += chatMessage)
       })(name => {
-        Global.discord.sendMessageFromWow(Some(name.name), chatMessage.message, chatMessage.tp, chatMessage.channel)
+        Global.discord.sendMessageFromWow(sessionId, Some(name.name), chatMessage.message, chatMessage.tp, chatMessage.channel)
       })
     }
   }
@@ -597,7 +600,7 @@ class GamePacketHandler(realmId: Int, realmName: String, sessionKey: Array[Byte]
     }
 
     // ignore if from an unhandled channel
-    if (!Global.wowToDiscord.contains((tp, channelName.map(_.toLowerCase)))) {
+    if (!Global.wowToDiscord.contains((sessionId, tp, channelName.map(_.toLowerCase)))) {
       return None
     }
 

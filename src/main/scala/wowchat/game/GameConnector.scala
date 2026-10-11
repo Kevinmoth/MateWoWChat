@@ -14,10 +14,11 @@ import io.netty.util.concurrent.Future
 
 import scala.util.Try
 
-class GameConnector(host: String,
+class GameConnector(session: WowSession,
+                    host: String,
                     port: Int,
-                    realmName: String,
                     realmId: Int,
+                    realmName: String,
                     sessionKey: Array[Byte],
                     gameEventCallback: CommonConnectionCallback)
   extends GamePackets with StrictLogging {
@@ -31,11 +32,11 @@ class GameConnector(host: String,
 
   def connect: Unit = {
     if (channel.fold(false)(_.isActive)) {
-      logger.error("Refusing to connect to game server. Connection already exists.")
+      logger.error(s"[${session.id}] Rechazando conexión al servidor de juego. La conexión ya existe.")
       return
     }
 
-    logger.info(s"Conectando al servidor de juego $realmName ($host:$port)")
+    logger.info(s"[${session.id}] Conectando al servidor de juego $realmName ($host:$port)")
 
     val bootstrap = new Bootstrap
     bootstrap.group(Global.group)
@@ -64,19 +65,19 @@ class GameConnector(host: String,
             WowChatConfig.getExpansion match {
               case WowExpansion.Vanilla =>
                 socketChannel.attr(CRYPT).set(new GameHeaderCrypt)
-                new GamePacketHandler(realmId, realmName, sessionKey, gameEventCallback)
+                new GamePacketHandler(session, realmId, realmName, sessionKey, gameEventCallback)
               case WowExpansion.TBC =>
                 socketChannel.attr(CRYPT).set(new GameHeaderCryptTBC)
-                new GamePacketHandlerTBC(realmId, realmName, sessionKey, gameEventCallback)
+                new GamePacketHandlerTBC(session, realmId, realmName, sessionKey, gameEventCallback)
               case WowExpansion.WotLK =>
                 socketChannel.attr(CRYPT).set(new GameHeaderCryptWotLK)
-                new GamePacketHandlerWotLK(realmId, realmName, sessionKey, gameEventCallback)
+                new GamePacketHandlerWotLK(session, realmId, realmName, sessionKey, gameEventCallback)
               case WowExpansion.Cataclysm =>
                 socketChannel.attr(CRYPT).set(new GameHeaderCryptWotLK)
-                new GamePacketHandlerCataclysm15595(realmId, realmName, sessionKey, gameEventCallback)
+                new GamePacketHandlerCataclysm15595(session, realmId, realmName, sessionKey, gameEventCallback)
               case WowExpansion.MoP =>
                 socketChannel.attr(CRYPT).set(new GameHeaderCryptMoP)
-                new GamePacketHandlerMoP18414(realmId, realmName, sessionKey, gameEventCallback)
+                new GamePacketHandlerMoP18414(session, realmId, realmName, sessionKey, gameEventCallback)
             }
           )
 
@@ -93,7 +94,7 @@ class GameConnector(host: String,
       Try {
         future.get(10, TimeUnit.SECONDS)
       }.fold(throwable => {
-        logger.error(s"fallo la conexión al servidor de juego! ${throwable.getMessage}")
+        logger.error(s"[${session.id}] fallo la conexión al servidor de juego! ${throwable.getMessage}")
         gameEventCallback.disconnected
       }, _ => Unit)
     }).channel)

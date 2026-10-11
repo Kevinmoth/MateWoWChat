@@ -1,8 +1,8 @@
 package wowchat.realm
-import wowchat.common.Packet
+import wowchat.common.{Packet, WowSession}
 
-class RealmPacketHandlerTBC(realmConnectionCallback: RealmConnectionCallback)
-  extends RealmPacketHandler(realmConnectionCallback) {
+class RealmPacketHandlerTBC(session: WowSession, realmConnectionCallback: RealmConnectionCallback)
+  extends RealmPacketHandler(session, realmConnectionCallback) {
 
   override protected def parseRealmList(msg: Packet): Seq[RealmList] = {
     msg.byteBuf.readIntLE // unknown
