@@ -1,0 +1,164 @@
+# Documentación Completa del Bot WoWChat - Discord
+
+## **Información General del Proyecto**
+- **Proyecto**: WoWChat - Bot que conecta World of Warcraft con Discord
+- **Lenguaje**: Scala con Maven como build tool
+- **Función**: Retransmite mensajes bidireccionales entre WoW y Discord
+- **Versión WoW**: 3.3.5 (WotLK)
+
+## **Estructura del Proyecto**
+```
+src/main/
+├── assembly/assembly.xml
+├── resources/
+│   ├── wowchat.conf (configuración principal)
+│   ├── logback.xml, achievements.csv, etc.
+└── scala/wowchat/
+    ├── WoWChat.scala (punto de entrada)
+    ├── discord/Discord.scala (manejo de Discord)
+    ├── game/ (manejo del cliente WoW)
+    ├── realm/ (autenticación WoW)
+    └── common/ (utilidades compartidas)
+```
+
+## **Archivo Clave: Discord.scala**
+Este archivo maneja toda la lógica Discord-WoW. Ubicación de funciones importantes:
+
+### **Función Principal de Procesamiento**
+```scala
+def sendMessageFromWow(from: Option[String], message: String, wowType: Byte, wowChannel: Option[String])
+```
+
+### **Pipeline de Procesamiento de Mensajes**
+1. `limpiarCodigosWoW()` - Elimina códigos de color de WoW
+2. `messageResolver.resolveLinks()` - Procesa enlaces
+3. `messageResolver.stripColorCoding()` - Limpieza adicional
+4. Escapado de caracteres Discord (`*`, `_`, `~`, `` ` ``)
+5. `aplicarNegrita()` - Convierte etiquetas a formato negrita
+6. Verificación de duplicados
+7. Formateo final y envío
+
+## **Modificaciones Implementadas**
+
+### **1. Limpieza de Códigos de Color**
+```scala
+private def limpiarCodigosWoW(mensaje: String): String = {
+  mensaje.replaceAll("\\|[CcRr][a-fA-F0-9]{0,8}", "")
+}
+```
+- **Ubicación**: Línea ~45 en Discord.scala
+- **Propósito**: Elimina códigos como `|Cffff0000` (color) y `|r` (reset)
+
+### **2. Formato de Negrita**
+```scala
+private def aplicarNegrita(mensaje: String): String = {
+  mensaje.replaceAll("\\[([A-Z][A-Za-z ]+)\\]", "**[$1]**")
+}
+```
+- **Ubicación**: Después de limpiarCodigosWoW
+- **Propósito**: Convierte `[RAID INFO]` → `**[RAID INFO]**`
+
+### **3. Sistema de Deduplicación**
+```scala
+private val recentMessages = mutable.Map[String, mutable.Queue[(String, Long)]]()
+private val duplicateWindow = 30000L
+private val maxRecentMessages = 10
+```
+- **Algoritmo**: Levenhstein distance < 3 caracteres = duplicado
+- **Ventana**: 30 segundos
+- **Memoria**: ~10KB máximo para todos los canales
+
+## **Configuración (wowchat.conf)**
+```hocon
+discord {
+  token="xxx"
+  enable_dot_commands=1
+}
+wow {
+  platform=Mac
+  version=3.3.5
+  realmlist=comunidad.naerzone.com
+  realm=Thalassa
+  account=<tu_cuenta_wow>
+  character=<tu_personaje>
+}
+chat {
+  channels=[
+    {
+      direction=wow_to_discord
+      wow { type=system }
+      discord { 
+        channel=1411769349944901795
+        format=" %message"
+      }
+    }
+    {
+      direction=wow_to_discord
+      wow {
+        type=Channel
+        channel="taberna"
+      }
+      discord {
+        channel=1373287482690375790
+        format="[%target] [%user]: %message"
+      }
+    }
+  ]
+}
+```
+
+## **Variables de Formato Disponibles**
+- `%time` - Timestamp
+- `%user` - Nombre del usuario
+- `%message` - Contenido del mensaje
+- `%target` - Canal destino
+- `%achievement` - ID de logro (para notificaciones)
+
+## **Compilación y Deploy**
+```bash
+mvn clean compile package
+# o si falla el clean:
+mvn compile package
+```
+- Archivo resultante: `target/wowchat-[version].jar`
+
+## **Problemas Comunes y Soluciones**
+
+### **Rate Limiting de Discord**
+- **Síntoma**: Mensajes con retraso de horas
+- **Causa**: Demasiados mensajes por segundo
+- **Solución**: Sistema de deduplicación implementado
+
+### **Caracteres Especiales no Funcionan**
+- **Causa**: Orden incorrecto de escapado vs formateo
+- **Solución**: Aplicar negrita DESPUÉS del escapado
+
+### **Códigos de Color Persistentes**
+- **Regex actual**: `\\|[CcRr][a-fA-F0-9]{0,8}`
+- **Extensible para otros códigos**: Modificar el patrón
+
+## **Arquitectura de Flujo de Datos**
+```
+WoW Game Client → GamePacketHandler → Discord.sendMessageFromWow() → Discord Channel
+Discord Channel → Discord.onMessageReceived() → GameCommandHandler → WoW Game Client
+```
+
+## **Puntos de Extensión Futura**
+1. **Filtros por canal**: Modificar `shouldFilter()` 
+2. **Rate limiting personalizado**: Agregar delays por canal en `sendMessageFromWow`
+3. **Nuevos formatos**: Extender `aplicarNegrita()` con más patrones
+4. **Estadísticas**: Agregar contadores en las variables privadas de clase
+5. **Logging mejorado**: Modificar niveles en `logback.xml`
+
+## **Dependencias Clave**
+- JDA (Java Discord API)
+- Scala Collections (mutable.Map, mutable.Queue)
+- Typesafe Config (para wowchat.conf)
+- SLF4J + Logback (logging)
+
+## **Testing y Debug**
+- **Logs importantes**: `logger.info`, `logger.debug` en sendMessageFromWow
+- **Variables clave a monitorear**: recentMessages.size, channelQueue.length
+- **Métricas**: Mensajes enviados vs descartados por duplicados
+
+Esta documentación te permitirá continuar el desarrollo con cualquier IA o desarrollador futuro.

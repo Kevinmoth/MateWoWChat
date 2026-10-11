@@ -1,0 +1,9 @@
+.idea
+*iml
+target
+GreetBot
+
+# Configs con secretos reales (no subir al historial)
+/wowchat.conf
+/wowchat.conf2
+/src/main/resources/wowchat.conf
