@@ -8,3 +8,8 @@ GreetBot
 /wowchat.conf2
 /wowchat-test.conf
 /src/main/resources/wowchat.conf
+
+# Artefactos de las pruebas en vivo
+test-run.log
+test-run.err
+test-run.pid
