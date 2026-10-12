@@ -233,13 +233,6 @@ val formatted = channelConfig
         val configChannelsNames = configChannels.map(_._1)
 
         val discordTextChannels = event.getEntity.getTextChannels.asScala
-        logger.info(s"[diagnostico] Guilds visibles para el bot: ${event.getEntity.getGuilds.asScala.map(guild =>
-          s"'${guild.getName}' (${guild.getTextChannels.size} canales de texto visibles)"
-        ).mkString(", ")}")
-        logger.info(s"[diagnostico] Canales de texto visibles: ${discordTextChannels.map(channel =>
-          s"'${channel.getName}' (${channel.getId})"
-        ).mkString(", ")}")
-        logger.info(s"[diagnostico] Buscando canales configurados: ${configChannelsNames.mkString(", ")}")
         val eligibleDiscordChannels = discordTextChannels
           .filter(channel =>
             configChannelsNames.contains(channel.getName.toLowerCase) ||

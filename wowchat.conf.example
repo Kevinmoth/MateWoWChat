@@ -1,0 +1,187 @@
+# ============================================================================
+# WoWChat Multi-Sesion v1.5.0 - Configuracion de produccion
+# ============================================================================
+# Copia este archivo como "wowchat.conf" junto al jar y completa:
+#   1) El token de tu bot de Discord
+#   2) Las credenciales de cada personaje (sessions)
+#   3) Los IDs de los canales de Discord (chat.channels)
+#
+# IMPORTANTE (portal de desarrolladores de Discord -> Bot):
+#   - Habilita SERVER MEMBERS INTENT y MESSAGE CONTENT INTENT
+#   - Invita el bot al servidor con permisos: Ver canales, Enviar mensajes,
+#     Incrustar enlaces y Leer historial de mensajes
+# ============================================================================
+
+discord {
+  token="PEGA-AQUI-EL-TOKEN-DE-TU-BOT"
+  # Comandos con punto (ej. ".server info") reenviados tal cual al WoW
+  enable_dot_commands=1
+  # Dejar vacio = todos permitidos. Ejemplos: "server info", "lookup *"
+  dot_commands_whitelist=[
+  ]
+  # Canales donde se aceptan los comandos ?. Vacio = todos los canales.
+  enable_commands_channels=[
+  ]
+  # Si un @tag escrito en WoW no resuelve a un miembro, avisar por susurro
+  enable_tag_failed_notifications=1
+  # Sitio usado para los links de items/hechizos/misiones
+  item_database="http://comunidadnaer.com"
+}
+
+wow {
+  # Mantener "Mac" en servidores con Warden activo (no esta soportado en Windows)
+  platform=Mac
+  # Tratar el MotD del servidor como mensaje del sistema
+  enable_server_motd=1
+  # TODAS las sesiones deben ser de la MISMA expansion (limitacion actual)
+  version=3.3.5
+
+  # Realmlist y reino por defecto (heredados por las sesiones que no los pisen)
+  realmlist=comunidad.naerzone.com
+  realm=Thalassa
+
+  # ---------------------------------------------------------------------------
+  # SESIONES: una cuenta/personaje de WoW por bloque. El nombre del bloque
+  # (horda, alianza, es) es el identificador que usan los canales mas abajo.
+  # ---------------------------------------------------------------------------
+  sessions {
+    # ---- Sesion 1: taberna de la HORDA ----
+    horda {
+      account="CUENTA-HORDA"
+      password="CLAVE-HORDA"
+      character="PERSONAJE-HORDA"
+      # realm="OtroReino"        # solo si difiere del de arriba
+      # realmlist="host:3724"    # solo si esta sesion entra por otro servidor
+    }
+
+    # ---- Sesion 2: taberna de la ALIANZA ----
+    alianza {
+      account="CUENTA-ALIANZA"
+      password="CLAVE-ALIANZA"
+      character="PERSONAJE-ALIANZA"
+    }
+
+    # ---- Sesion 3: servidor espanol (tabernas unificadas) ----
+    es {
+      # Si el reino ES es distinto al de arriba, descomenta y pon su nombre:
+      # realm="NOMBRE-DEL-REINO-ES"
+      # Si incluso entra por otro realmlist:
+      # realmlist="otro-host:3724"
+      account="CUENTA-ES"
+      password="CLAVE-ES"
+      character="PERSONAJE-ES"
+    }
+  }
+}
+
+chat {
+  channels=[
+    # =====================================================================
+    # TABERNAS: cada sesion retransmite a su canal de Discord.
+    # "session" debe coincidir con el nombre del bloque de sessions.
+    # direction=both  -> WoW<->Discord  |  wow_to_discord / discord_to_wow
+    # =====================================================================
+
+    # ---- Taberna de la HORDA ----
+    {
+      direction=both
+      wow {
+        session="horda"
+        type=Channel
+        channel="taberna"
+        format="[%user]: %message"
+      }
+      discord {
+        # ID del canal de Discord de la taberna de la horda
+        channel="ID-CANAL-TABERNA-HORDA"
+        format="🍻 - [**Taberna-Horda**] [`%user`]: %message"
+      }
+    }
+
+    # ---- Taberna de la ALIANZA ----
+    {
+      direction=both
+      wow {
+        session="alianza"
+        type=Channel
+        channel="taberna"
+        format="[%user]: %message"
+      }
+      discord {
+        channel="ID-CANAL-TABERNA-ALIANZA"
+        format="🍻 - [**Taberna-Alianza**] [`%user`]: %message"
+      }
+    }
+
+    # ---- Taberna del servidor ESPANOL ----
+    {
+      direction=both
+      wow {
+        session="es"
+        type=Channel
+        channel="taberna"
+        format="[%user]: %message"
+      }
+      discord {
+        channel="ID-CANAL-TABERNA-ES"
+        format="🍻 - [**Taberna-ES**] [`%user`]: %message"
+      }
+    }
+
+    # ---- Mensajes del SISTEMA (reino de la ALIANZA) ----
+    {
+      direction=wow_to_discord
+      wow {
+        session="alianza"
+        type=system
+      }
+      discord {
+        # Este ID ya lo usabas en tu config de produccion:
+        channel=1411769349944901795
+        format="%message"
+      }
+    }
+
+    # =====================================================================
+    # EJEMPLOS de otros tipos de chat (descomentar y asignar session):
+    # type=Say | Yell | Emote | Whisper | Guild | Officer | Raid | Party
+    # =====================================================================
+    #{
+    #  direction=wow_to_discord
+    #  wow {
+    #    session="horda"
+    #    type=Say
+    #    format="[%user]: %message"
+    #  }
+    #  discord {
+    #    channel="ID-CANAL"
+    #    format="[%user]: %message"
+    #  }
+    #}
+  ]
+}
+
+guild {
+  # ---------------------------------------------------------------------------
+  # Notificaciones de hermandad. "session" (opcional) delimita a que sesion
+  # aplica; si se omite, la notificacion se enlaza a TODAS las sesiones.
+  # channel = ID o nombre del canal de Discord (opcional; si se omite, usa
+  # los canales con puente de CHAT de hermandad de esa sesion).
+  # ---------------------------------------------------------------------------
+  promoted { enabled=0 session="alianza" }
+  demoted  { enabled=0 session="alianza" }
+  online   { enabled=0 }
+  offline  { enabled=0 }
+  joined   { enabled=0 }
+  left     { enabled=0 }
+  removed  { enabled=0 }
+  motd     { enabled=0 }
+  Logro    { enabled=0 }
+}
+
+filters {
+  # Filtros globales por regex (se aplican a todo lo retransmitido)
+  enabled=0
+  patterns=[
+  ]
+}
