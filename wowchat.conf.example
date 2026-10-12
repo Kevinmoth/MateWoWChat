@@ -26,6 +26,62 @@ discord {
   enable_tag_failed_notifications=1
   # Sitio usado para los links de items/hechizos/misiones
   item_database="http://comunidadnaer.com"
+
+  # ===========================================================================
+  # EMOTES Y FORMATO - se aplican a los mensajes WoW->Discord, en orden.
+  # Para agregar uno nuevo basta con anadir una linea y reiniciar el bot.
+  #
+  # ESCAPES EN HOCON (entre comillas):  \\[ -> \[   \\b -> \b   \\d -> \d
+  #   \\{ -> \{    \\} -> \}    \n -> salto de linea    $1,$2 -> grupos
+  # Emotes propios del servidor: <a:nombre:ID> (animado) o <:nombre:ID>
+  # Regex invalida = el bot no arranca y te dice cual fue.
+  # ===========================================================================
+  format_rules=[
+    # Traducciones rapidas
+    { pattern="(?i)\\bplayers\\b", replacement="jugadores" },
+    { pattern="(?i)\\bprogress\\b", replacement="progreso" },
+    { pattern="(?i)\\bguild\\b", replacement="hermandad" },
+    { pattern="(?i)group type", replacement="tipo de grupo" },
+
+    # Anuncios de servidor con emotes propios
+    { pattern="\\[(RAID INFO)\\]", replacement=" <a:raidzoom:1539319773777629194> **[RAID INFO]**" },
+    { pattern="\\[(DUNGEON INFO)\\]", replacement=" <:mazmo:1493405181575036948> **[MAZMORRAS]**" },
+    { pattern="\\[(RatedBG Announce)\\]", replacement="**[$1]**" },
+    { pattern="\\[(RatedBG Queue Announce)\\]", replacement="**[$1]**" },
+    { pattern="\\[(Arena Queue Announcer)\\]", replacement=" 🗡️ **[Anuncio de cola de Arenas]**" },
+    { pattern="\\[(BG Queue Announcer)\\]", replacement="**[$1]**" },
+    { pattern="\\[(Arena Wrath)\\]", replacement="**[$1]**" },
+    { pattern="\\[(Battle Frenzy)\\]", replacement="**[$1]**" },
+    { pattern="\\[(Guild)\\]", replacement="**[$1]**" },
+    { pattern="\\[(System)\\]", replacement="**[$1]**" },
+    { pattern="\\[Announce by ([^\\]]+)\\]:", replacement=" :staff: **[ANUNCIO - $1]**:" },
+
+    # Negritas de hermandad (nota: va DESPUES de la traduccion guild->hermandad)
+    { pattern="hermandad ([^.]+)\\.", replacement="hermandad **$1**." },
+
+    # Autobroadcast en bloque de codigo
+    { pattern="\\[Autobroadcast\\]:(.+)", replacement="```\n📢 [Recordatorio]:$1\n```" },
+
+    # Destacados varios
+    { pattern="MMR: ([2-9]\\d{3})", replacement="MMR: **$1** 🔥" },
+    { pattern="Progresión: (\\d+)/(\\1)\\b", replacement="Progresión: 🏆 **$1/$1 COMPLETADO**" },
+
+    # Marcadores de objetivo de WoW {rt1}..{rt8}
+    { pattern="(?i)\\{rt1\\}|\\{star\\}|\\{estrella\\}", replacement="⭐" },
+    { pattern="(?i)\\{rt2\\}|\\{circle\\}|\\{circulo\\}", replacement="🔶" },
+    { pattern="(?i)\\{rt3\\}|\\{diamond\\}|\\{diamante\\}", replacement="🔷" },
+    { pattern="(?i)\\{rt4\\}|\\{triangle\\}|\\{triangulo\\}", replacement="🔺" },
+    { pattern="(?i)\\{rt5\\}|\\{moon\\}|\\{luna\\}", replacement="🌙" },
+    { pattern="(?i)\\{rt6\\}|\\{square\\}|\\{cuadrado\\}", replacement="🟦" },
+    { pattern="(?i)\\{rt7\\}|\\{cross\\}|\\{x\\}|\\{cruz\\}", replacement="❌" },
+    { pattern="(?i)\\{rt8\\}|\\{skull\\}|\\{calavera\\}", replacement="💀" },
+
+    # Taberna
+    { pattern="(?i)\\[taberna\\]\\[([^\\]]+)\\]:", replacement=" 🍻 **[Taberna]** [$1]:" },
+
+    # Evento raid killers
+    { pattern="\\[RAID INFO - RAID KILLERS EVENT\\]", replacement="🔥⚔️ **[RAID KILLERS]** ⚔️🔥" },
+  ]
 }
 
 wow {

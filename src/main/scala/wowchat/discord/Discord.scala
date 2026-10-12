@@ -67,38 +67,12 @@ class Discord(discordConnectionCallback: CommonConnectionCallback) extends Liste
   private def limpiarCodigosWoW(mensaje: String): String = {
   mensaje.replaceAll("\\|[CcRr][a-fA-F0-9]{0,8}", "")  // Solo limpiar códigos de color
 }
-  private def aplicarNegrita(mensaje: String): String = {
-  mensaje
-    .replaceAll("(?i)\\bplayers\\b", "jugadores")
-    .replaceAll("(?i)\\bprogress\\b", "progreso")
-    .replaceAll("(?i)\\bguild\\b", "hermandad")
-    .replaceAll("(?i)group type", "tipo de grupo")
-    .replaceAll("\\[(RAID INFO)\\]", " <a:raidzoom:1539319773777629194> **[RAID INFO]**")
-    .replaceAll("\\[(DUNGEON INFO)\\]", " <:mazmo:1493405181575036948> **[MAZMORRAS]**")
-    .replaceAll("\\[(RatedBG Announce)\\]", "**[$1]**")
-    .replaceAll("\\[(RatedBG Queue Announce)\\]", "**[$1]**")
-    .replaceAll("\\[(Arena Queue Announcer)\\]", " 🗡️ **[Anuncio de cola de Arenas]**")
-    .replaceAll("\\[(BG Queue Announcer)\\]", "**[$1]**") 
-    .replaceAll("\\[(Arena Wrath)\\]", "**[$1]**")       
-    .replaceAll("\\[(Battle Frenzy)\\]", "**[$1]**")      
-    .replaceAll("\\[(Guild)\\]", "**[$1]**")
-    .replaceAll("\\[(System)\\]", "**[$1]**")
-    .replaceAll("\\[Announce by ([^\\]]+)\\]:", " :staff: **[ANUNCIO - $1]**:")
-    .replaceAll("hermandad ([^.]+)\\.", "hermandad **$1**.")
-    .replaceAll("\\[Autobroadcast\\]:(.+)", "```\n📢 [Recordatorio]:$1\n```")
-    .replaceAll("MMR: ([2-9]\\d{3})", "MMR: **$1** 🔥")
-    .replaceAll("Progresión: (\\d+)/(\\1)\\b", "Progresión: 🏆 **$1/$1 COMPLETADO**")
-    .replaceAll("(?i)\\{rt1\\}|\\{star\\}|\\{estrella\\}", "⭐")
-    .replaceAll("(?i)\\{rt2\\}|\\{circle\\}|\\{circulo\\}", "🔶")
-    .replaceAll("(?i)\\{rt3\\}|\\{diamond\\}|\\{diamante\\}", "🔷") 
-    .replaceAll("(?i)\\{rt4\\}|\\{triangle\\}|\\{triangulo\\}", "🔺")
-    .replaceAll("(?i)\\{rt5\\}|\\{moon\\}|\\{luna\\}", "🌙")
-    .replaceAll("(?i)\\{rt6\\}|\\{square\\}|\\{cuadrado\\}", "🟦")
-    .replaceAll("(?i)\\{rt7\\}|\\{cross\\}|\\{x\\}|\\{cruz\\}", "❌")
-    .replaceAll("(?i)\\{rt8\\}|\\{skull\\}|\\{calavera\\}", "💀")
-    .replaceAll("(?i)\\[taberna\\]\\[([^\\]]+)\\]:", " 🍻 **[Taberna]** [$1]:")
-    .replaceAll("\\[RAID INFO - RAID KILLERS EVENT\\]", "🔥⚔️ **[RAID KILLERS]** ⚔️🔥")
-}
+  private def aplicarFormatos(mensaje: String): String = {
+    Global.config.discord.formatRules.foldLeft(mensaje) {
+      case (result, rule) =>
+        rule.compiled.matcher(result).replaceAll(rule.replacement)
+    }
+  }
 //funcion para eliminar mensajes duplicados
 private def levenshteinDistance(s1: String, s2: String): Int = {
   val memo = mutable.Map[(Int, Int), Int]()
@@ -130,8 +104,8 @@ val parsedResolvedTags = from.map(_ => {
   .replace("_", "\\_")
   .replace("~", "\\~")
 
-// Aplicar negrita DESPUÉS del escapado
-val finalMessageContent = aplicarNegrita(parsedResolvedTags)
+// Aplicar reglas de formato DESPUÉS del escapado (format_rules del config)
+val finalMessageContent = aplicarFormatos(parsedResolvedTags)
 //--auxiliares para eliminar duplicados
 
 val channelName = s"${channel.getId}-${wowChannel.getOrElse("default")}"

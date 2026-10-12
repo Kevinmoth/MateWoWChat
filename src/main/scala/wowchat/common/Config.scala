@@ -17,7 +17,12 @@ case class WowChatConfig(discord: DiscordConfig, wow: Wow, sessions: Seq[WowSess
 case class WowSession(id: String, realmlist: RealmListConfig, account: Array[Byte], password: String, character: String) {
   override def toString: String = s"WowSession($id, realm=${realmlist.name}, character=$character)"
 }
-case class DiscordConfig(token: String, enableDotCommands: Boolean, dotCommandsWhitelist: Set[String], enableCommandsChannels: Set[String], enableTagFailedNotifications: Boolean, itemDatabase: Option[String])
+case class FormatRule(pattern: String, replacement: String) {
+  // Precompilada al crear la regla: un regex invalido revienta al arrancar
+  // con un mensaje claro, no en mitad de un mensaje de chat.
+  val compiled: java.util.regex.Pattern = java.util.regex.Pattern.compile(pattern)
+}
+case class DiscordConfig(token: String, enableDotCommands: Boolean, dotCommandsWhitelist: Set[String], enableCommandsChannels: Set[String], enableTagFailedNotifications: Boolean, itemDatabase: Option[String], formatRules: Seq[FormatRule])
 case class Wow(locale: String, platform: Platform.Value, realmBuild: Option[Int], gameBuild: Option[Int], realmlist: RealmListConfig, account: Array[Byte], password: String, character: String, enableServerMotd: Boolean)
 case class RealmListConfig(name: String, host: String, port: Int)
 case class GuildConfig(notificationConfigs: Map[String, GuildNotificationConfig])
@@ -63,7 +68,8 @@ object WowChatConfig extends GamePackets {
         getOpt[util.List[String]](discordConf, "enable_commands_channels")
           .getOrElse(new util.ArrayList[String]()).asScala.map(_.toLowerCase).toSet,
         getOpt[Boolean](discordConf, "enable_tag_failed_notifications").getOrElse(true),
-        getOpt[String](discordConf, "item_database")
+        getOpt[String](discordConf, "item_database"),
+        parseFormatRules(discordConf)
       ),
       Wow(
         getOpt[String](wowConf, "locale").getOrElse("enUS"),
@@ -138,6 +144,26 @@ object WowChatConfig extends GamePackets {
       (splt.head, 3724)
     } else {
       (splt.head, splt(1).toInt)
+    }
+  }
+
+  // Reglas de formateo de mensajes WoW->Discord: lista de {pattern, replacement}
+  // con regex de Java (replaceAll). Se aplican en orden, tras el escapado de
+  // markdown. Ausencia de format_rules = mensajes sin formato extra.
+  private def parseFormatRules(discordConf: Config): Seq[FormatRule] = {
+    if (!discordConf.hasPath("format_rules")) {
+      return Seq.empty
+    }
+
+    discordConf.getObjectList("format_rules").asScala.map(_.toConfig).map { ruleConf =>
+      val pattern = ruleConf.getString("pattern")
+      val replacement = getOpt[String](ruleConf, "replacement").getOrElse("")
+      try {
+        FormatRule(pattern, replacement)
+      } catch {
+        case e: java.util.regex.PatternSyntaxException =>
+          throw new IllegalArgumentException(s"format_rules: regex invalida '$pattern': ${e.getDescription}", e)
+      }
     }
   }
 
