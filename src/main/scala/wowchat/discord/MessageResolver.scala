@@ -116,7 +116,9 @@ class MessageResolver(jda: JDA) {
 
   private def resolveTagMatcher(names: Seq[(String, String)], tag: String, isRole: Boolean): Seq[(String, String)] = {
     val lTag = tag.toLowerCase
-    if (lTag == "here") {
+    // Nunca resolver @everyone/@here aunque el texto llegara crudo:
+    // quedan como texto plano inofensivo.
+    if (lTag == "here" || lTag == "everyone") {
       return Seq.empty
     }
 

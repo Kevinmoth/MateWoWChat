@@ -89,9 +89,19 @@ private def levenshteinDistance(s1: String, s2: String): Int = {
   distance(s1.length, s2.length)
 }
 
+  // Neutraliza menciones masivas para que nadie pueda pinguear al servidor desde
+  // el juego: se eliminan @everyone, @here y cualquier mencion raw <@ID> inyectada
+  // como texto plano (que Discord renderizaria como mencion real).
+  private def sanitizarMenciones(mensaje: String): String = {
+    mensaje
+      .replaceAll("(?i)@(everyone|here)\\b", "")
+      .replaceAll("(?i)<@([&!]?\\d{1,32})>", "")
+  }
+
   def sendMessageFromWow(sessionId: String, from: Option[String], message: String, wowType: Byte, wowChannel: Option[String]): Unit = {
     Global.wowToDiscord.get((sessionId, wowType, wowChannel.map(_.toLowerCase))).foreach(discordChannels => {
-      val parsedLinks = messageResolver.resolveEmojis(messageResolver.stripColorCoding(limpiarCodigosWoW(messageResolver.resolveLinks(message))))
+      val mensajeSeguro = sanitizarMenciones(message)
+      val parsedLinks = messageResolver.resolveEmojis(messageResolver.stripColorCoding(limpiarCodigosWoW(messageResolver.resolveLinks(mensajeSeguro))))
       discordChannels.foreach {
         case (channel, channelConfig) =>
           val errors = mutable.ArrayBuffer.empty[String]
@@ -154,6 +164,7 @@ val formatted = channelConfig
   }
 
   def sendGuildNotification(sessionId: String, eventKey: String, message: String): Unit = {
+    val mensajeSeguro = sanitizarMenciones(message)
     Global.guildEventsToDiscord
       .getOrElse(
         (sessionId, eventKey),
@@ -162,8 +173,8 @@ val formatted = channelConfig
         ).map(_._1)
       )
       .foreach(channel => {
-        logger.info(s"WoW->Discord(${channel.getName}) $message")
-        channel.sendMessage(message).queue()
+        logger.info(s"WoW->Discord(${channel.getName}) $mensajeSeguro")
+        channel.sendMessage(mensajeSeguro).queue()
       })
   }
 
@@ -329,9 +340,9 @@ val formatted = channelConfig
     val channelId = channel.getId
     val channelName = event.getChannel.getName.toLowerCase
     val effectiveName = sanitizeName(event.getMember.getEffectiveName)
-    val message = (sanitizeMessage(event.getMessage.getContentDisplay) +: event.getMessage.getAttachments.asScala.map(_.getUrl))
+    val message = sanitizarMenciones((sanitizeMessage(event.getMessage.getContentDisplay) +: event.getMessage.getAttachments.asScala.map(_.getUrl))
       .filter(_.nonEmpty)
-      .mkString(" ")
+      .mkString(" "))
     val enableCommandsChannels = Global.config.discord.enableCommandsChannels
     logger.debug(s"RECV DISCORD MESSAGE: [${channel.getName}] [$effectiveName]: $message")
     if (message.isEmpty) {
