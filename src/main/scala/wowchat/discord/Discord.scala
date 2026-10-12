@@ -272,6 +272,18 @@ val formatted = channelConfig
             }
         })
 
+        // Canales configurados que el bot no puede ver (ID mal copiado, permisos
+        // insuficientes o el bot no esta en ese servidor). Sin esto fallarian en silencio.
+        val missingChannels = configChannels.filter {
+          case (name, _) =>
+            !discordTextChannels.exists(channel =>
+              name.equalsIgnoreCase(channel.getName) || name == channel.getId
+            )
+        }.map(_._2.discord.channel)
+        if (missingChannels.nonEmpty) {
+          logger.warn(s"Canales configurados pero NO visibles para el bot: ${missingChannels.mkString(", ")}")
+        }
+
         if (Global.discordToWow.nonEmpty || Global.wowToDiscord.nonEmpty) {
           if (firstConnect) {
             discordConnectionCallback.connected

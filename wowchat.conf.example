@@ -150,7 +150,7 @@ chat {
       discord {
         # ID del canal de Discord de la taberna de la horda
         channel="ID-CANAL-TABERNA-HORDA"
-        format="🍻 - [**Taberna-Horda**] [`%user`]: %message"
+        format="🍻 - [**Taberna**] [`%user`]: %message"
       }
     }
 
@@ -165,7 +165,7 @@ chat {
       }
       discord {
         channel="ID-CANAL-TABERNA-ALIANZA"
-        format="🍻 - [**Taberna-Alianza**] [`%user`]: %message"
+        format="🍻 - [**Taberna**] [`%user`]: %message"
       }
     }
 
@@ -180,7 +180,7 @@ chat {
       }
       discord {
         channel="ID-CANAL-TABERNA-ES"
-        format="🍻 - [**Taberna-ES**] [`%user`]: %message"
+        format="🍻 - [**Taberna**] [`%user`]: %message"
       }
     }
 
