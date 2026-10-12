@@ -29,7 +29,7 @@ class MessageResolver(jda: JDA) {
     "quest" -> "\\|.+?\\|Hquest:(\\d+):.+?\\|h\\[(.+?)]\\|h\\|r".r
   )
 
-  protected val defaultLinkSite = "http://comunidadnaer.com"
+  protected def defaultLinkSite = "http://comunidadnaer.com"
 
   private val linkSite = Global.config.discord.itemDatabase.fold(defaultLinkSite)(itemDatabase => {
     if (itemDatabase != "") {
@@ -100,12 +100,12 @@ class MessageResolver(jda: JDA) {
           if (matches.size == 1) {
             s"<@${matches.head._2}>"
           } else if (matches.size > 1 && matches.size < 5) {
-            onError(s"tu etiqueta @$tag coincide con múltiples miembros del canal: ${
+            onError(s"tu etiqueta @$tag coincide con mÃºltiples miembros del canal: ${
               matches.map(_._1).mkString(", ")
-            }. Sé más específico en tu etiqueta!")
+            }. SÃ© mÃ¡s especÃ­fico en tu etiqueta!")
             m.group(0)
           } else if (matches.size >= 5) {
-            onError(s"Tu etiqueta @$tag coincide con demasiados miembros del canal. Sé más específico en tu etiqueta!")
+            onError(s"Tu etiqueta @$tag coincide con demasiados miembros del canal. SÃ© mÃ¡s especÃ­fico en tu etiqueta!")
             m.group(0)
           } else {
             m.group(0)
@@ -182,7 +182,7 @@ class MessageResolverTBC(jda: JDA) extends MessageResolver(jda) {
     "quest" -> "\\|.+?\\|Hquest:(\\d+):.+?\\|h\\[(.+?)]\\|h\\|r".r
   )
 
-  override protected val defaultLinkSite = "http://comunidadnaer.com"
+  override protected def defaultLinkSite = "http://comunidadnaer.com"
 }
 
 class MessageResolverWotLK(jda: JDA) extends MessageResolverTBC(jda) {
@@ -195,12 +195,12 @@ class MessageResolverWotLK(jda: JDA) extends MessageResolverTBC(jda) {
     "spell" -> "\\|Htrade:(\\d+):.+?\\|h\\[(.+?)]\\|h".r
   )
 
-  override protected val defaultLinkSite = "http://comunidadnaer.com"
+  override protected def defaultLinkSite = "http://comunidadnaer.com"
 }
 
 class MessageResolverCataclysm(jda: JDA) extends MessageResolverWotLK(jda) {
 
-  override protected val defaultLinkSite = "http://comunidadnaer.com"
+  override protected def defaultLinkSite = "http://comunidadnaer.com"
 }
 
 class MessageResolverMoP(jda: JDA) extends MessageResolverCataclysm(jda) {
@@ -213,5 +213,5 @@ class MessageResolverMoP(jda: JDA) extends MessageResolverCataclysm(jda) {
     "spell" -> "\\|Htrade:.+?:(\\d+):.+?\\|h\\[(.+?)]\\|h".r
   )
 
-  override protected val defaultLinkSite = "http://comunidadnaer.com"
+  override protected def defaultLinkSite = "http://comunidadnaer.com"
 }

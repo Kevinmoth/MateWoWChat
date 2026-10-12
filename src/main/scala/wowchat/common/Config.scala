@@ -71,9 +71,11 @@ object WowChatConfig extends GamePackets {
         getOpt[Int](wowConf, "realm_build").orElse(getOpt[Int](wowConf, "build")),
         getOpt[Int](wowConf, "game_build").orElse(getOpt[Int](wowConf, "build")),
         parseRealmlist(wowConf),
-        convertToUpper(wowConf.getString("account")),
-        wowConf.getString("password"),
-        wowConf.getString("character"),
+        // Campos legacy de sesion unica: en modo multi-sesion no existen y nada los usa
+        // (las credenciales reales viven en cada WowSession).
+        getOpt[String](wowConf, "account").fold(Array.empty[Byte])(convertToUpper),
+        getOpt[String](wowConf, "password").getOrElse(""),
+        getOpt[String](wowConf, "character").getOrElse(""),
         getOpt[Boolean](wowConf, "enable_server_motd").getOrElse(true)
       ),
       sessions,

@@ -12,6 +12,7 @@
         <java.version>1.8</java.version>
         <scala.version.major>2.12</scala.version.major>
         <scala.version.minor>12</scala.version.minor>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
@@ -83,6 +84,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <encoding>UTF-8</encoding>
                     <scalaVersion>${scala.version.major}.${scala.version.minor}</scalaVersion>
                     <args>
                         <arg>-unchecked</arg>
