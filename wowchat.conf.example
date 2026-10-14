@@ -117,11 +117,11 @@ wow {
       character="PERSONAJE-ALIANZA"
     }
 
-    # ---- Sesion 3: servidor espanol (tabernas unificadas) ----
+    # ---- Sesion 3: reino espanol AEGWYNN (tabernas unificadas) ----
     es {
-      # Si el reino ES es distinto al de arriba, descomenta y pon su nombre:
-      # realm="NOMBRE-DEL-REINO-ES"
-      # Si incluso entra por otro realmlist:
+      # Aegwynn esta en el mismo realmlist, solo necesita el realm:
+      realm="Aegwynn"
+      # Si algun dia entrara por otro realmlist, descomenta:
       # realmlist="otro-host:3724"
       account="CUENTA-ES"
       password="CLAVE-ES"
@@ -184,7 +184,7 @@ chat {
       }
     }
 
-    # ---- Mensajes del SISTEMA (reino de la ALIANZA) ----
+    # ---- Mensajes del SISTEMA de THALASSA (sesion alianza) ----
     {
       direction=wow_to_discord
       wow {
@@ -197,6 +197,22 @@ chat {
         format="%message"
       }
     }
+
+    # ---- Mensajes del SISTEMA de AEGWYNN (sesion es) ----
+    # Descomenta y pon el ID de un canal de sistema para Aegwynn
+    # (en las pruebas usaste uno por reino; si prefieres uno solo,
+    #  elimina este bloque y Aegwynn no retransmitira sistema):
+    #{
+    #  direction=wow_to_discord
+    #  wow {
+    #    session="es"
+    #    type=system
+    #  }
+    #  discord {
+    #    channel="ID-CANAL-SISTEMA-AEGWYNN"
+    #    format="%message"
+    #  }
+    #}
 
     # =====================================================================
     # EJEMPLOS de otros tipos de chat (descomentar y asignar session):
@@ -224,8 +240,8 @@ guild {
   # channel = ID o nombre del canal de Discord (opcional; si se omite, usa
   # los canales con puente de CHAT de hermandad de esa sesion).
   # ---------------------------------------------------------------------------
-  promoted { enabled=0 session="alianza" }
-  demoted  { enabled=0 session="alianza" }
+  promoted { enabled=0, session="alianza" }
+  demoted  { enabled=0, session="alianza" }
   online   { enabled=0 }
   offline  { enabled=0 }
   joined   { enabled=0 }

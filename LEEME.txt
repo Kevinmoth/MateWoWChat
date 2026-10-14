@@ -55,6 +55,9 @@
   - EMOTES Y FORMATO: se configuran en discord.format_rules del wowchat.conf
     (lista de {pattern, replacement} con regex de Java). Agregar uno nuevo es
     anadir una linea y reiniciar el bot - NO hace falta recompilar nada.
+  - SEGURIDAD: los mensajes retransmitidos se sanitizan automaticamente:
+    @everyone, @here y menciones raw <@ID> inyectadas desde el juego se
+    eliminan. Es imposible pinguear al servidor desde la taberna.
   - El bot escribe logs SOLO a consola. Con systemd los ves con journalctl.
     Si lo corres a mano y quieres persistirlos: ./run.sh >> bot.log 2>&1 &
   - Todas las sesiones deben ser de la MISMA expansion de WoW (version=).
