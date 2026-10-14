@@ -133,12 +133,18 @@ wow {
 chat {
   channels=[
     # =====================================================================
-    # TABERNAS: cada sesion retransmite a su canal de Discord.
-    # "session" debe coincidir con el nombre del bloque de sessions.
+    # IDENTIDAD DE CADA PUENTE = session + type + channel:
+    #   session -> QUE PERSONAJE transmite (bloque de wow.sessions)
+    #   type    -> tipo de chat del juego (Channel, Say, Yell, Whisper,
+    #              Guild, Raid, Party, system, ...)
+    #   channel -> nombre del canal DENTRO del juego (solo para type=Channel).
+    #              "taberna" existe por separado en cada faccion y reino:
+    #              el mismo nombre, canales distintos; quien decide cual
+    #              escuchas es la session.
     # direction=both  -> WoW<->Discord  |  wow_to_discord / discord_to_wow
     # =====================================================================
 
-    # ---- Taberna de la HORDA ----
+    # ---- Taberna de la HORDA (la transmite el personaje de sessions.horda) ----
     {
       direction=both
       wow {
@@ -154,7 +160,7 @@ chat {
       }
     }
 
-    # ---- Taberna de la ALIANZA ----
+    # ---- Taberna de la ALIANZA (la transmite el personaje de sessions.alianza) ----
     {
       direction=both
       wow {
@@ -169,7 +175,7 @@ chat {
       }
     }
 
-    # ---- Taberna del servidor ESPANOL ----
+    # ---- Taberna del reino ES (la transmite el personaje de sessions.es) ----
     {
       direction=both
       wow {

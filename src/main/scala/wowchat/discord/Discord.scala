@@ -283,6 +283,18 @@ val formatted = channelConfig
             }
         })
 
+        // Tabla de ruteo: deja explicito que canal de Discord escucha a que
+        // personaje, para no tener que cruzar mentalmente la config.
+        Global.config.channels.foreach(channelConfig => {
+          val sessionId = channelConfig.wow.session.getOrElse(Global.config.defaultSessionId)
+          val character = Global.config.sessions
+            .find(_.id == sessionId)
+            .map(_.character)
+            .getOrElse("???")
+          val wowDesc = channelConfig.wow.channel.fold(ChatEvents.valueOf(channelConfig.wow.tp))(name => s"canal '$name'")
+          logger.info(s"[Puente] ${channelConfig.discord.channel} <- sesion '$sessionId' (personaje $character) [$wowDesc, ${channelConfig.chatDirection}]")
+        })
+
         // Canales configurados que el bot no puede ver (ID mal copiado, permisos
         // insuficientes o el bot no esta en ese servidor). Sin esto fallarian en silencio.
         val missingChannels = configChannels.filter {

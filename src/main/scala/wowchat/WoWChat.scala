@@ -25,7 +25,9 @@ object WoWChat extends StrictLogging {
       "wowchat.conf"
     }
     Global.config = WowChatConfig(confFile)
-    logger.info(s"Sesiones configuradas: ${Global.config.sessions.map(_.id).mkString(", ")}")
+    logger.info(s"Sesiones configuradas: ${Global.config.sessions.map(session =>
+      s"${session.id} (${session.character} @ ${session.realmlist.name})"
+    ).mkString(", ")}")
 
     try {
       checkForNewVersion
