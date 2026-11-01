@@ -32,7 +32,7 @@
             <outputDirectory/>
             <directory>${project.basedir}</directory>
             <includes>
-                <include>wowchat.conf.example</include>
+                <include>matechat.conf.example</include>
             </includes>
             <fileMode>0644</fileMode>
         </fileSet>

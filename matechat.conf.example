@@ -1,7 +1,7 @@
 # ============================================================================
-# WoWChat Multi-Sesion v1.5.0 - Configuracion de produccion
+# Matechat 1.5.0 - Configuracion de produccion
 # ============================================================================
-# Copia este archivo como "wowchat.conf" junto al jar y completa:
+# Copia este archivo como "matechat.conf" junto al jar y completa:
 #   1) El token de tu bot de Discord
 #   2) Las credenciales de cada personaje (sessions)
 #   3) Los IDs de los canales de Discord (chat.channels)

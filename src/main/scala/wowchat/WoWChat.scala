@@ -13,16 +13,23 @@ import scala.io.Source
 
 object WoWChat extends StrictLogging {
 
-  private val RELEASE = "v1.5.0-multisesion"
+  private val RELEASE = "v1.5.0"
 
   def main(args: Array[String]): Unit = {
     printBanner()
-    logger.info(s"Corriendo MateChat - $RELEASE")
+    logger.info(s"Corriendo Matechat - $RELEASE")
     val confFile = if (args.nonEmpty) {
       args(0)
     } else {
-      logger.info("No se proporcionó un archivo de configuración. Intentando con wowchat.conf por defecto.")
-      "wowchat.conf"
+      val defaultConf = new java.io.File("matechat.conf")
+      val legacyConf = new java.io.File("wowchat.conf")
+      if (!defaultConf.exists() && legacyConf.exists()) {
+        logger.warn("No se encontro matechat.conf; usando el archivo heredado wowchat.conf. Renombralo a matechat.conf.")
+        legacyConf.getName
+      } else {
+        logger.info("No se proporciono un archivo de configuracion. Intentando con matechat.conf por defecto.")
+        defaultConf.getName
+      }
     }
     Global.config = WowChatConfig(confFile)
     logger.info(s"Sesiones configuradas: ${Global.config.sessions.map(session =>
@@ -120,7 +127,7 @@ object WoWChat extends StrictLogging {
 
   private def checkForNewVersion = {
     // This is JSON, but I really just didn't want to import a full blown JSON library for one string.
-    val data = Source.fromURL("https://api.github.com/repos/fjaros/wowchat/releases/latest").mkString
+    val data = Source.fromURL("https://api.github.com/repos/Kevinmoth/MateWoWChat/releases/latest").mkString
     val regex = "\"tag_name\":\"(.+?)\",".r
     val repoTagName = regex
       .findFirstMatchIn(data)
@@ -131,7 +138,7 @@ object WoWChat extends StrictLogging {
       logger.error( "~~~ !!!                Tu version esta desactualizada               !!! ~~~")
       logger.error(s"~~~ !!!                      Version:  $RELEASE                      !!! ~~~")
       logger.error(s"~~~ !!!                     vercion del repo    Version:  $repoTagName                      !!! ~~~")
-      logger.error( "~~~ !!! descarga la actualizacion de https://github.com/kevinmoth/wowchat  !!! ~~~")
+      logger.error( "~~~ !!! descarga la actualizacion de https://github.com/Kevinmoth/MateWoWChat/releases  !!! ~~~")
       logger.error( "~~~ !!!                Tu version esta desactualizada               !!! ~~~")
     }
   }

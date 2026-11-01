@@ -1,5 +1,6 @@
 
-# MateWoWChat
+# Matechat
+Fork mejorado de `wowchat` (producto base): misma base, muchas más funcionalidades y correcciones.
 Retransmite canales de chat de NaerZone a tu servidor de Discord
 -Los Items/Spells/profeciones linkeados se convierten en un enlace a nuestra bd (comunidadnaer.com)
 

@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>wowchat</groupId>
-    <artifactId>wowchat</artifactId>
+    <groupId>matechat</groupId>
+    <artifactId>matechat</artifactId>
     <version>1.5.0</version>
 
     <properties>
@@ -112,7 +112,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <finalName>wowchat</finalName>
+                    <finalName>matechat</finalName>
                     <filters>
                         <filter>
                             <artifact>*:*</artifact>

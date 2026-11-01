@@ -4,6 +4,12 @@ target
 GreetBot
 
 # Configs con secretos reales (no subir al historial)
+/matechat.conf
+/matechat.conf2
+/matechat-test.conf
+/src/main/resources/matechat.conf
+
+# Nombres heredados del producto base (wowchat)
 /wowchat.conf
 /wowchat.conf2
 /wowchat-test.conf
