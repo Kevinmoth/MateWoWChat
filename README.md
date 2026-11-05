@@ -14,7 +14,7 @@ v1.0.7
 - Implementada interfaz de configuracion
 - `Ahora no es necesario configurar el servidor/cuenta/token etc modificando archivos`
 
-
+![demo](https://i.ibb.co/G3xyWpY7/2026-11-05-13-14-58-online-video-cutter-com-1.gif)
 -----------------------------------------------------------------
 <img width="788" height="600" alt="Sin título" src="https://github.com/user-attachments/assets/f32ff30d-85b9-4fea-91f4-9090244b3bc7" />
 
@@ -24,7 +24,7 @@ v1.0.7
 <img width="878" height="619" alt="image" src="https://github.com/user-attachments/assets/db35348e-33e3-49e9-8ca4-ec64c3e28d04" />
 
 
-![demo]([https://tu-host.com/ruta/demo.gif](https://i.ibb.co/G3xyWpY7/2026-11-05-13-14-58-online-video-cutter-com-1.gif))
+
 <table>
   <tr>
     <td>
